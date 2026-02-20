@@ -26,6 +26,10 @@ library(BayesFactor)
 library(gridExtra)
 library(broom)
 library(tibble)
+library(dplyr)
+library(flextable)
+library(officer)
+
 
 here_dir   <- here()
 parent_dir <- dirname(here_dir)
@@ -569,8 +573,8 @@ formatted_table <- format_table(all_results)
 View(formatted_table)
 # Save CSV
 
-write.csv(formatted_table, "output/Table1.csv", row.names = FALSE)
-export_results_to_word(formatted_table, "output/Table1.docx")
+write.csv(formatted_table, str_c(parent_dir,"/output/Table1.csv"), row.names = FALSE)
+export_results_to_word(formatted_table, str_c(parent_dir,"/output/Table1.docx"))
 
 ## Figure 2: Relating modularity and density to questionnaire scores
 #####################
@@ -596,7 +600,7 @@ Fig2 <- grid.arrange(
   
 )
 
-ggsave("figures/Fig2.png", plot = Fig2, width = 17, height = 8, units = "in")
+ggsave(str_c(parent_dir,"/output/figures/Fig2.png"), plot = Fig2, width = 17, height = 8, units = "in")
 
 ## RQ2: LOCAL NETWORK PROPERTIES
 
@@ -618,9 +622,9 @@ Fig5_layout_matrix <- rbind(
 # Arrange plots with added space
 Fig5 <- grid.arrange(
   Fig5a, Fig5b, Fig5c, Fig5d, Fig5e, Fig5f, 
-  layout_matrix = Fig4_layout_matrix
+  layout_matrix = Fig5_layout_matrix
 )
-ggsave("figures/Fig5.png", plot = Fig5, width = 5, height = 8, units = "in")
+ggsave(str_c(parent_dir,"/output/figures/Fig5.png"), plot = Fig5, width = 5, height = 8, units = "in")
 
 ## stats
 #####################
@@ -783,7 +787,7 @@ FigS1 <- grid.arrange(
   heights = c(1, 0.2, 1)
 )
 
-ggsave("figures/FigS01.png", plot = FigS1, width = 17, height = 8, units = "in")
+ggsave(str_c(parent_dir, "/output/figures/FigS01.png"), plot = FigS1, width = 17, height = 8, units = "in")
 
 ## stats
 #####################

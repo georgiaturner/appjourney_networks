@@ -119,7 +119,7 @@ Fig3 <- plot_combined_apps(
   Interpreted_MostAuto_App_name, MostAuto_App_category,
   Interpreted_LeastAuto_App_name, LeastAuto_App_category
 )
-ggsave("figures/Fig3.png", plot = Fig3, width = 10, height = 4, units = "in")
+ggsave(str_c(parent_dir,"/output/figures/Fig3.png"),plot = Fig3, width = 10, height = 4, units = "in")
 
 ################################################################################
 ## Fig 4: MostAuto and LeastAuto App descriptives
@@ -133,7 +133,7 @@ plot_raincloud(participant_level_df, SRHI_most_automatic_app_score, "Most Automa
 plot_raincloud(participant_level_df, SRHI_social_media_use_score, "Social Media Use")
 plot_raincloud(participant_level_df, SRHI_least_automatic_app_score, "Least Automatic", automatic_palette["Least Automatic"])
 Fig1a <- plot_combined_rainclouds(participant_level_df)
-ggsave("figures/Fig1a.png", plot = Fig1a, width = 10, height = 7, units = "in")
+ggsave(str_c(parent_dir,"/output/figures/Fig1a.png"), plot = Fig1a, width = 10, height = 7, units = "in")
 
 ######### stats ######### 
 
@@ -272,7 +272,7 @@ plot_statistic("mean")   # For mean
 plot_statistic("median") # For median
 plot_statistic("sd")     # For standard deviation
 Fig1b <- plot_statistic("mean")
-ggsave("figures/Fig1b.png", plot = Fig1b, width = 5, height = 7, units = "in")
+ggsave(str_c(parent_dir,"/output/figures/Fig1b.png"), plot = Fig1b, width = 5, height = 7, units = "in")
 
 ######### stats ######### 
 
@@ -371,7 +371,7 @@ Fig1c <- ggplot(ppid_proportions, aes(x = app_type, y = proportion, fill = app_t
   scale_color_manual(values = automatic_palette) +
   theme_classic() +
   theme(legend.position = "none")
-ggsave("figures/Fig1c.png", plot = Fig1c, width = 5, height = 7, units = "in")
+ggsave(str_c(parent_dir,"/output/figures/Fig1c.png"), plot = Fig1c, width = 5, height = 7, units = "in")
 
 ######### stats ######### 
 
@@ -452,7 +452,7 @@ Fig4d <- ggplot(summary_data, aes(x = app_position, y = mean_value, fill = auto_
   scale_color_manual(values = automatic_palette) +
   scale_fill_manual(values = automatic_palette) +
   theme_classic()
-ggsave("figures/Fig4d.png", plot = Fig4d, width = 6.5, height = 7, units = "in")
+ggsave(str_c(parent_dir,"/output/figures/Fig4d.png"),, plot = Fig4d, width = 6.5, height = 7, units = "in")
 
 
 ######### stats ######### 
@@ -542,7 +542,7 @@ p_matrix[which(is.na(p_matrix))] <- 1
 FigS1 <- corrplot(cor_matrix, method = "color", 
          p.mat = p_matrix, sig.level = c(0.001, 0.01, 0.05), 
          insig = "label_sig", pch.cex = 2.5)
-png("figures/FigS1.png", width = 12, height = 12, units = "in", res = 300)
+png(str_c(parent_dir,"/output/figures/FigS1.png"),width = 12, height = 12, units = "in", res = 300)
 p_matrix[upper.tri(p_matrix)] <- t(p_matrix)[upper.tri(p_matrix)]
 corrplot(cor_matrix, method = "color", 
          p.mat = p_matrix, sig.level = c(0.001, 0.01, 0.05), 
