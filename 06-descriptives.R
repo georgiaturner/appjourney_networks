@@ -132,8 +132,8 @@ plot_raincloud(participant_level_df, SRHI_phone_use_score, "Phone Use")
 plot_raincloud(participant_level_df, SRHI_most_automatic_app_score, "Most Automatic", automatic_palette["Most Automatic"])
 plot_raincloud(participant_level_df, SRHI_social_media_use_score, "Social Media Use")
 plot_raincloud(participant_level_df, SRHI_least_automatic_app_score, "Least Automatic", automatic_palette["Least Automatic"])
-Fig1a <- plot_combined_rainclouds(participant_level_df)
-ggsave(str_c(parent_dir,"/output/figures/Fig1a.png"), plot = Fig1a, width = 10, height = 7, units = "in")
+Fig4a <- plot_combined_rainclouds(participant_level_df)
+ggsave(str_c(parent_dir,"/output/figures/Fig4a.png"), plot = Fig4a, width = 10, height = 7, units = "in")
 
 ######### stats ######### 
 
@@ -271,8 +271,8 @@ automatic_app_appsessions_duration <- app_session_level_df %>%
 plot_statistic("mean")   # For mean
 plot_statistic("median") # For median
 plot_statistic("sd")     # For standard deviation
-Fig1b <- plot_statistic("mean")
-ggsave(str_c(parent_dir,"/output/figures/Fig1b.png"), plot = Fig1b, width = 5, height = 7, units = "in")
+Fig4b <- plot_statistic("mean")
+ggsave(str_c(parent_dir,"/output/figures/Fig4b.png"), plot = Fig4b, width = 5, height = 7, units = "in")
 
 ######### stats ######### 
 
@@ -325,7 +325,7 @@ sd(filter(ppid_proportions, app_type == "Least Automatic")$proportion)
 # Determine the y-position for annotation
 y_max <- max(ppid_proportions$proportion) + 0.05
 
-Fig1c <- ggplot(ppid_proportions, aes(x = app_type, y = proportion, fill = app_type)) +
+Fig4c <- ggplot(ppid_proportions, aes(x = app_type, y = proportion, fill = app_type)) +
   stat_halfeye(
     adjust = 0.4,
     justification = -0.3,
@@ -371,7 +371,7 @@ Fig1c <- ggplot(ppid_proportions, aes(x = app_type, y = proportion, fill = app_t
   scale_color_manual(values = automatic_palette) +
   theme_classic() +
   theme(legend.position = "none")
-ggsave(str_c(parent_dir,"/output/figures/Fig1c.png"), plot = Fig1c, width = 5, height = 7, units = "in")
+ggsave(str_c(parent_dir,"/output/figures/Fig4c.png"), plot = Fig4c, width = 5, height = 7, units = "in")
 
 ######### stats ######### 
 

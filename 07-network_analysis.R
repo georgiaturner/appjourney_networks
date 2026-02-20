@@ -763,31 +763,31 @@ coreness_df <- na.omit(data.frame(
 bf_coreness <- ttestBF(x = coreness_df$x, y = coreness_df$y, paired = TRUE)
 print(bf_coreness)
 
-## Figure S1: Relating modularity and density to BIS/BAS questionnaire scores
+## Figure S2: Relating modularity and density to BIS/BAS questionnaire scores
 #####################
 
 variables_BISBAS <- c("BIS_total_score",
                       "BAS_total_score", "BAS_fun_seeking_score", "BAS_drive_score",
                       "BAS_reward_responsiveness_score")
 
-color_palette_FigS1 <- c("darkgreen", "darkgreen", "darkgreen", "darkgreen", "darkgreen" )
+color_palette_FigS2 <- c("darkgreen", "darkgreen", "darkgreen", "darkgreen", "darkgreen" )
 
-FigS1a <- plot_measure_facet1row(participant_level_df, "modularity_louvain_orderA", variables_BISBAS, color_palette_FigS1)
-FigS1b <- plot_measure_facet1row(participant_level_df, "edge_density_orderA", variables_BISBAS, color_palette_FigS1)
+FigS2a <- plot_measure_facet1row(participant_level_df, "modularity_louvain_orderA", variables_BISBAS, color_palette_FigS2)
+FigS2b <- plot_measure_facet1row(participant_level_df, "edge_density_orderA", variables_BISBAS, color_palette_FigS2)
 
-FigS1_layout_matrix <- rbind(
+FigS2_layout_matrix <- rbind(
   c(1),
   c(NA),
   c(2))
 
 # Arrange plots with added space
-FigS1 <- grid.arrange(
-  FigS1a, FigS1b, 
-  layout_matrix = FigS1_layout_matrix,
+FigS2 <- grid.arrange(
+  FigS2a, FigS2b, 
+  layout_matrix = FigS2_layout_matrix,
   heights = c(1, 0.2, 1)
 )
 
-ggsave(str_c(parent_dir, "/output/figures/FigS01.png"), plot = FigS1, width = 17, height = 8, units = "in")
+ggsave(str_c(parent_dir, "/output/figures/FigS2.png"), plot = FigS2, width = 17, height = 8, units = "in")
 
 ## stats
 #####################
