@@ -83,6 +83,7 @@ get_local_props <- function(graph, node_name) {
   coreness                        <- coreness(graph)[node_name]
   
   # calculate in diversity and out diversity another way to check
+  # note: we use the above way (in_diversity) in the paper; this is just double checking that it doesn't differ using a different method which we don't ultimately use in the paper
   
   incoming_neighbors <- neighbors(graph, node_name, mode = "in")
   # Step 2: Create a subgraph with these neighbors plus the node_name itself
