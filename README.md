@@ -11,6 +11,9 @@ PARENT_FOLDER
       ├── 02-process_app_data.R
       ├── 03-process_qnr_data.R
       ├── 04-make_summary_dfs.R
+      ├── 05-further_cleaning.R
+      ├── 06-descriptives.R
+      ├── 07-network_analysis.R
       └── itaco_scripts.Rproj
 └── usable_participant_data #containing the folders for each individual participants iTACO data 
 └── data_processed #where the final processed dataframes are saved after preprocessing. 
@@ -53,3 +56,15 @@ The dataframes are
  
 It then saves these in a folder 'data_processed'.
 It saves them with the date and time so that it doesn't overwrite any previous ones.
+
+## 05-further_cleaning.R
+
+This script performs further preprocessing steps specific to the analysis in the AppJourney project, such as removing inattentive participants, renaming underlying Apps with interpretable names, etc.
+
+## 06-descriptives.R
+
+Plots the descriptives in the manuscript and outputs manuscript figures.
+
+## 07-network_analysis.R
+
+Performs the network analysis in the manuscripts and outputs manuscript figures.
