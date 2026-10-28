@@ -16,15 +16,16 @@ library(tidyverse)
 library(here)
 library(ggplot2)
 
-here_dir   <- here()
-parent_dir <- dirname(here_dir)
-setwd(parent_dir)
+#here_dir   <- here()
+#parent_dir <- dirname(here_dir)
+#setwd(parent_dir)
 
 ################################################################################
 ############                load in data            ############################
 ################################################################################
 
-filepath                   <- str_c(parent_dir, "/data_processed/")
+#filepath                   <- str_c(parent_dir, "/data_processed/")
+filepath <- ("../data_processed/")
 event_level_filename       <- "250908_1519_event_level_df.csv"
 app_session_level_filename <- "250908_1523_appsession_level_df.csv"
 session_level_filename     <- "250908_1523_session_level_df.csv"
@@ -518,7 +519,6 @@ isi_per_ppid <- isi_df %>%
   select(ppid, mean_isi, median_isi, sd_isi)
 
 
-
 # Summarize per app_session_id and ppid
 event_per_app_session_vars <- event_level_df_processed %>%
   filter(Event %in% touch_events) %>%
@@ -614,6 +614,53 @@ participant_level_df_merged <- participant_level_df_processed %>%
 colnames(participant_level_df_merged)
 
 ################################################################################
+############        Add categories to app session df           #################
+################################################################################
+
+# Function to automatically get Google Play app categoreies for a given App
+get_category <- function(pkg) {
+  
+  url <- paste0("https://play.google.com/store/apps/details?id=", pkg, "&hl=en&gl=us")
+  
+  tryCatch({
+    
+    page <- httr::GET(
+      url,
+      httr::add_headers(`User-Agent` =
+                          "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+    )
+    
+    html <- read_html(page)
+    
+    cat <- html %>%
+      html_elements('[itemprop="genre"]') %>%
+      html_text()
+    
+    if(length(cat) == 0) return(NA)
+    
+    cat[1]
+    
+  }, error = function(e) {
+    NA
+  })
+}
+# test:
+get_category("com.waitrose.groceries")
+
+unique_apps <- unique(app_session_level_df_processed$App)
+
+AppCat_map <- data.frame(
+  App                 = unique_apps,
+  GooglePlay_category = map_chr(unique_apps, get_category)
+)
+
+# add these to appsession_level_df_processed
+app_session_level_df_processed <- app_session_level_df_processed %>%
+  left_join(AppCat_map, by = "App") %>%
+  rename(AppCategory = GooglePlay_category)
+
+
+################################################################################
 ############                    Saved processed dfs            #################
 ################################################################################
 
@@ -623,6 +670,7 @@ write.csv(event_level_df_processed, str_c(save_directory, "/",format(Sys.time(),
 write_csv(app_session_level_df_processed, str_c(save_directory, "/",format(Sys.time(), format = "%y%m%d_%H%M_"), app_session_level_filename))
 write_csv(session_level_df_processed, str_c(save_directory, "/",format(Sys.time(), format = "%y%m%d_%H%M_"), session_level_filename))
 write_csv(participant_level_df_merged, str_c(save_directory, "/",format(Sys.time(), format = "%y%m%d_%H%M_"), participant_level_filename))
+write_csv(AppCat_map, str_c("../data_processed/", format(Sys.time(), format = "%y%m%d_%H%M_"), "GooglePlayAppCategory_Map.csv"))
 
 
 

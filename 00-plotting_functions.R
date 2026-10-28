@@ -119,7 +119,7 @@ plot_raincloud <- function(data, variable, label, fill_color = "#1f77b4") {
 }
 
 
-plot_combined_rainclouds <- function(data) {
+plot_combined_rainclouds_SRHI <- function(data, palette) {
   # Define color palette
   automatic_palette <- c(
     "Phone Use" = "#aec7e8",
@@ -181,6 +181,70 @@ plot_combined_rainclouds <- function(data) {
       axis.text.x = element_text(angle = 30, hjust = 1)
     )
 }
+
+plot_combined_rainclouds_SRHI <- function(data, palette) {
+  # Define color palette
+  automatic_palette <- c(
+    "Phone Use" = "#aec7e8",
+    "Social Media Use" = "#aec7e8",
+    "Most Automatic" = "#1b9e77",
+    "Least Automatic" = "#d95f02"
+  )
+  
+  # Reshape data into long format
+  data_long <- data %>%
+    mutate(id = row_number()) %>%
+    select(
+      id,
+      `Phone Use` = SRHI_phone_use_score,
+      `Social Media Use` = SRHI_social_media_use_score,
+      `Most Automatic` = SRHI_most_automatic_app_score,
+      `Least Automatic` = SRHI_least_automatic_app_score
+    ) %>%
+    pivot_longer(
+      -id,
+      names_to = "Variable",
+      values_to = "Score"
+    )
+  
+  # Create raincloud plot
+  ggplot(data_long, aes(x = Variable, y = Score, fill = Variable)) +
+    stat_halfeye(
+      adjust = 0.4,
+      justification = -0.5,
+      width = 0.4,
+      point_colour = NA,
+      interval_size = NA
+    ) +
+    geom_boxplot(
+      width = 0.1,
+      outlier.shape = NA,
+      alpha = 0.5,
+      aes(color = Variable)
+      
+    ) +
+    geom_jitter(
+      width = 0.08,
+      alpha = 0.3,
+      size = 3,
+      aes(color = Variable),
+      stroke = 0,
+      shape = 16
+    ) +
+    scale_fill_manual(values = automatic_palette) +
+    scale_color_manual(values = automatic_palette) +
+    labs(
+      title = "SRHI Raincloud Plots",
+      x = NULL,
+      y = "SRHI Score"
+    ) +
+    theme_classic() +
+    theme(
+      legend.position = "none",
+      axis.text.x = element_text(angle = 30, hjust = 1)
+    )
+}
+
 
 plot_statistic <- function(stat_type) {
   # Define the color palette
@@ -350,6 +414,119 @@ plot_raincloud2vars <- function(df, col_most, col_least) {
     theme(legend.position = "none")
 }
 
+plot_multi_rainclouds <- function(
+    data,
+    base_var,
+    domains = c(
+      "Social",
+      "Productivity",
+      "Education",
+      "Communication",
+      "Entertainment",
+      "Maps & Navigation" ,
+      "Music & Audio" ,
+      "News & Magazines"  ,
+      "Health & Fitness"  
+    ),
+    labels = domains,
+    colors = NULL,
+    title = "Raincloud Plot"
+) {
+    
+    # Build variable names dynamically
+    vars <- paste0(base_var, "_", domains)
+    
+    # Default labels
+    if (is.null(labels)) labels <- domains
+    
+    #
+    if (is.null(colors)) {
+      colors <- setNames(
+        grDevices::colorRampPalette(c(
+          "#66c2a5", "#fc8d62", "#8da0cb",
+          "#e78ac3", "#a6d854", "#ffd92f",
+          "#e5c494", "#b3b3b3"
+        ))(length(vars)),
+        vars
+      )
+    }
+    
+    # Long format
+    data_long <- data %>%
+      mutate(id = row_number()) %>%
+      select(id, all_of(vars)) %>%
+      pivot_longer(
+        -id,
+        names_to = "Variable",
+        values_to = "Value"
+      ) %>%
+      mutate(
+        Variable = factor(
+          Variable,
+          levels = vars,
+          labels = labels
+        )
+      )
+    
+    ggplot(data_long, aes(x = Variable, y = Value, fill = Variable)) +
+      
+      stat_halfeye(
+        adjust = 0.4,
+        justification = -0.5,
+        width = 0.4,
+        point_colour = NA,
+        interval_size = NA
+      ) +
+      
+      geom_boxplot(
+        width = 0.1,
+        outlier.shape = NA,
+        alpha = 0.5,
+        aes(color = Variable)
+      ) +
+      
+      geom_jitter(
+        width = 0.08,
+        alpha = 0.3,
+        size = 2,
+        aes(color = Variable),
+        stroke = 0,
+        shape = 16
+      ) +
+      
+      scale_fill_manual(
+        values = setNames(colors, labels)
+      ) +
+      
+      scale_color_manual(
+        values = setNames(colors, labels)
+      ) +
+      
+      labs(
+        title = title,
+        x = NULL,
+        y = NULL
+      ) +
+      
+      theme_classic() +
+      
+      theme(
+        legend.position = "none",
+        
+        # Bigger x-axis labels
+        axis.text.x = element_text(
+          angle = 30,
+          hjust = 1,
+          size = 16
+        ),
+        
+        # Bigger y-axis numbers
+        axis.text.y = element_text(
+          size = 16
+        )
+      )
+  }
+  
 scaled_shannon_diversity <- function(graph, node, mode = c("in", "out")) {
   mode <- match.arg(mode)
   
@@ -621,8 +798,8 @@ plot_measure_facet1row <- function(df, measure, variables, color_palette ) {
     ) +
     theme_classic()+ 
     theme(
-      axis.text.x = element_text(size = 12, angle = 45, hjust = 1),
-      axis.text.y = element_text(size = 12)
+      axis.text.x = element_text(size = 15, angle = 45, hjust = 1),
+      axis.text.y = element_text(size = 15)
       
     )
 }
@@ -855,7 +1032,7 @@ export_results_to_word <- function(formatted_df, filename = "Table2.docx") {
     fontsize(size = 10, part = "all") |>
     fontsize(size = 12, part = "header") |>
     bold(part = "header") |>
-    align(j = c("Beta", "StdError", "R2", "p_value", "BF"), align = "right", part = "all") |>
+    align(j = c("B", "Beta", "Beta_StdErr", "R2", "p_value", "BF"), align = "right", part = "all") |>
     align(j = c("Outcome", "ModelType", "sig", "BF_interpretation"), align = "center", part = "all")
   
   # Create Word doc

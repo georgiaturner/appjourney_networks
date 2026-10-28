@@ -40,19 +40,55 @@ save_directory <- stringi::stri_join(dirname(here()), "data_processed", "", sep 
 ############                load in data            ############################
 ################################################################################
 
+######## CM dataset
+
 filepath                   <- str_c(parent_dir, "/data_processed/")
 
-event_level_filename       <- "250909_1851_250908_1519_event_level_df.csv"
-app_session_level_filename <- "250909_1852_250908_1523_appsession_level_df.csv"
-session_level_filename     <- "250909_1852_250908_1523_session_level_df.csv"
-participant_level_filename <- "250909_1852_250908_1520_participant_level_df.csv"
+CM_event_level_filename       <- "250909_1851_250908_1519_event_level_df.csv"
+CM_app_session_level_filename <- "250909_1852_250908_1523_appsession_level_df.csv"
+CM_session_level_filename     <- "250909_1852_250908_1523_session_level_df.csv"
+CM_participant_level_filename <- "250909_1852_250908_1520_participant_level_df.csv"
 
-event_level_df               <- read.csv(str_c(filepath, event_level_filename), stringsAsFactors = FALSE)
-event_level_df$Date_and_Time <- as.POSIXct(event_level_df$Date_and_Time, format = "%Y-%m-%d %H:%M:%OS", tz = "UTC")
-app_session_level_df         <- read_csv(str_c(filepath, app_session_level_filename))
-session_level_df             <- read_csv(str_c(filepath, session_level_filename))
-participant_level_df         <- read_csv(str_c(filepath, participant_level_filename))
+#event_level_df               <- read.csv(str_c(filepath, CM_event_level_filename), stringsAsFactors = FALSE)
+# Event level df takes much longer to load, so comment out unless explicitly needed
+#event_level_df$Date_and_Time <- as.POSIXct(event_level_df$Date_and_Time, format = "%Y-%m-%d %H:%M:%OS", tz = "UTC")
+CM_app_session_level_df         <- read_csv(str_c(filepath, CM_app_session_level_filename))
+CM_session_level_df             <- read_csv(str_c(filepath, CM_session_level_filename))
+CM_participant_level_df         <- read_csv(str_c(filepath, CM_participant_level_filename))
 TableAppNameConversion_df    <- read_csv(str_c(filepath, 'TableS2.csv')) # list of all the conversions from raw answers to self-repoted MostAuto and LeastAuto Apps, to interpreted actual app names and underlying apps
+GooglePlay_CategoryMap_df    <- read_csv(str_c(filepath, '260514_1452_GooglePlayAppCategory_Map.csv'))
+
+######## ABCD dataset
+
+ABCD_filename                 <- "261005_1216_abcd_appusage2_sevendays_qnr.csv"
+ABCD_app_session_level_df     <- read_csv(str_c(filepath, ABCD_filename)) %>%
+  rename(session_id       = phone_session_id, # previous name was phone_session_id, here we change to session_id
+         ppid             = participant_id,
+         App              = app) %>%
+  mutate(app_session_id = row_number())
+
+ABCD_mean_screen_time <- ABCD_app_session_level_df |>
+  dplyr::summarise(
+    sec_foreground = sum(sec_foreground, na.rm = TRUE),
+    .by = c(ppid, dt)
+  ) |>
+  group_by(ppid) |>
+  dplyr::summarise(
+    mean_timespent_per_day_secs = mean(sec_foreground, na.rm = TRUE),
+    mean_timespent_per_day_hrs  = (mean_timespent_per_day_secs / 3600),
+    .groups = "drop"
+  )
+
+ABCD_participant_level_df     <- select(ABCD_app_session_level_df,
+                                        ppid,
+                                        mh_y_ysr__dsm__anx_tscore,
+                                        mh_y_ysr__dsm__dep_tscore,
+                                        mh_y_ysr__dsm__adhd_tscore
+) %>% 
+  group_by(ppid) %>%
+  slice(1) %>%
+  ungroup() %>%
+  mutate(mean_timespent_per_day_hrs = ABCD_mean_screen_time$mean_timespent_per_day_hrs)
 
 
 ################################################################################
@@ -61,53 +97,80 @@ TableAppNameConversion_df    <- read_csv(str_c(filepath, 'TableS2.csv')) # list 
 
 # This section contains exploratory descriptives which do not go in the final paper.
 
+### CM Dataset
+
 # Calculate the total frequency for each gender
-total_frequency <- participant_level_df %>%
+total_frequency <- CM_participant_level_df %>%
   group_by(gender) %>%
   dplyr::summarize(Total = n())
 # Create a bar chart with custom colors and labels
-ggplot(participant_level_df, aes(x = gender, fill = gender)) +
+ggplot(CM_participant_level_df, aes(x = gender, fill = gender)) +
   geom_bar() +
   geom_text(aes(label = Total, y = Total), data = total_frequency, vjust = -0.5) +
   scale_fill_manual(values = c("Male" = "blue", "Female" = "red", "Other" = "gray")) +
   labs(title = "Gender Distribution", x = "Gender", y = "Frequency")
 
 #### Plot questionnaire distributions
-plot_density_by_gender(participant_level_df, PHQ_8_score, 10)
-plot_density_by_gender(participant_level_df, GAD_7_score, 15)
-plot_density_by_gender(participant_level_df, OCI_R_score, 21)
-plot_density_by_gender(participant_level_df, SRHI_phone_use_score)
-plot_density_by_gender(participant_level_df, SRHI_social_media_use_score)
-plot_density_by_gender(participant_level_df, SRHI_most_automatic_app_score)
-plot_density_by_gender(participant_level_df, SRHI_least_automatic_app_score)
-plot_density_by_gender(participant_level_df, BIS_total_score)
-plot_density_by_gender(participant_level_df, BAS_total_score)
-plot_density_by_gender(participant_level_df, BAS_drive_score)
-plot_density_by_gender(participant_level_df, BAS_fun_seeking_score)
-plot_density_by_gender(participant_level_df, BAS_reward_responsiveness_score)
+plot_density_by_gender(CM_participant_level_df, PHQ_8_score, 10)
+plot_density_by_gender(CM_participant_level_df, GAD_7_score, 15)
+plot_density_by_gender(CM_participant_level_df, OCI_R_score, 21)
+plot_density_by_gender(CM_participant_level_df, SRHI_phone_use_score)
+plot_density_by_gender(CM_participant_level_df, SRHI_social_media_use_score)
+plot_density_by_gender(CM_participant_level_df, SRHI_most_automatic_app_score)
+plot_density_by_gender(CM_participant_level_df, SRHI_least_automatic_app_score)
+plot_density_by_gender(CM_participant_level_df, BIS_total_score)
+plot_density_by_gender(CM_participant_level_df, BAS_total_score)
+plot_density_by_gender(CM_participant_level_df, BAS_drive_score)
+plot_density_by_gender(CM_participant_level_df, BAS_fun_seeking_score)
+plot_density_by_gender(CM_participant_level_df, BAS_reward_responsiveness_score)
 
-plot_density(participant_level_df, SRHI_phone_use_score)
-plot_density(participant_level_df, SRHI_social_media_use_score)
-plot_density(participant_level_df, SRHI_most_automatic_app_score)
-plot_density(participant_level_df, SRHI_least_automatic_app_score)
-plot_all_densities(participant_level_df)
+plot_density(CM_participant_level_df, SRHI_phone_use_score)
+plot_density(CM_participant_level_df, SRHI_social_media_use_score)
+plot_density(CM_participant_level_df, SRHI_most_automatic_app_score)
+plot_density(CM_participant_level_df, SRHI_least_automatic_app_score)
+plot_all_densities(CM_participant_level_df)
+
 
 ################################################################################
 ## General reporting info for methods section
 ################################################################################
 
 #### count days
-day_df <- event_level_df %>% 
-  group_by(ppid) %>%
-  filter(day == max(day)) %>%
-  slice(1) %>%
-  ungroup()
-mean(day_df$day)
-sd(day_df$day)
+#day_df <- event_level_df %>% 
+#  group_by(ppid) %>%
+#  filter(day == max(day)) %>%
+#  slice(1) %>%
+#  ungroup()
+#sd(day_df$day)
+##mean(day_df$day)
 
 ################################################################################
 ## Fig 3: MostAuto and LeastAuto App names
 ################################################################################
+
+## Add GooglePlay categories to table; only do this if not already done (so then set to F)
+GooglePlayAdded <- T
+if (!GooglePlayAdded) {
+  TableAppNameConversion_df <- TableAppNameConversion_df %>%
+    left_join(
+      GooglePlay_CategoryMap_df %>%
+        select(App, GooglePlay_category),
+      by = c("Underlying_MostAuto_App_inDCAdata" = "App")
+    ) %>%
+    rename(
+      MostAutoApp_GooglePlayCategory = GooglePlay_category
+    ) %>%
+    left_join(
+      GooglePlay_CategoryMap_df %>%
+        select(App, GooglePlay_category),
+      by = c("Underlying_LeastAuto_App_inDCAdata" = "App")
+    ) %>%
+    rename(
+      LeastAutoApp_GooglePlayCategory = GooglePlay_category
+    )
+  write_csv(TableAppNameConversion_df, str_c(filepath, 'TableS2.csv'))
+}
+
 
 unique(TableAppNameConversion_df$Raw_selfreported_MostAutoApp)
 TableAppNameConversion_df_plotAutoApps <- filter(TableAppNameConversion_df, 
@@ -119,7 +182,7 @@ Fig3 <- plot_combined_apps(
   Interpreted_MostAuto_App_name, MostAuto_App_category,
   Interpreted_LeastAuto_App_name, LeastAuto_App_category
 )
-ggsave(str_c(parent_dir,"/output/figures/Fig3.png"),plot = Fig3, width = 10, height = 4, units = "in")
+ggsave(str_c(parent_dir,"/output/figures/Fig3.pdf"),plot = Fig3, width = 10, height = 4, units = "in")
 
 ################################################################################
 ## Fig 4: MostAuto and LeastAuto App descriptives
@@ -128,45 +191,45 @@ ggsave(str_c(parent_dir,"/output/figures/Fig3.png"),plot = Fig3, width = 10, hei
 ## Fig 4a: SRHI questionnaire scores
 #####################
 
-plot_raincloud(participant_level_df, SRHI_phone_use_score, "Phone Use")
-plot_raincloud(participant_level_df, SRHI_most_automatic_app_score, "Most Automatic", automatic_palette["Most Automatic"])
-plot_raincloud(participant_level_df, SRHI_social_media_use_score, "Social Media Use")
-plot_raincloud(participant_level_df, SRHI_least_automatic_app_score, "Least Automatic", automatic_palette["Least Automatic"])
-Fig4a <- plot_combined_rainclouds(participant_level_df)
-ggsave(str_c(parent_dir,"/output/figures/Fig4a.png"), plot = Fig4a, width = 10, height = 7, units = "in")
+plot_raincloud(CM_participant_level_df, SRHI_phone_use_score, "Phone Use")
+plot_raincloud(CM_participant_level_df, SRHI_most_automatic_app_score, "Most Automatic", automatic_palette["Most Automatic"])
+plot_raincloud(CM_participant_level_df, SRHI_social_media_use_score, "Social Media Use")
+plot_raincloud(CM_participant_level_df, SRHI_least_automatic_app_score, "Least Automatic", automatic_palette["Least Automatic"])
+Fig4a <- plot_combined_rainclouds_SRHI(CM_participant_level_df, automatic_palette)
+ggsave(str_c(parent_dir,"/output/figures/Fig4a.pdf"), plot = Fig4a, width = 10, height = 7, units = "in")
 
 ######### stats ######### 
 
 # calculate exclusion datasets
 
-SRHI_least_automatic_app_score_outliers = find_outliers(participant_level_df, "SRHI_least_automatic_app_score")$outlier_ids
-participant_level_df_NoSRHILeastOutliers <- filter(participant_level_df, !(ppid %in% SRHI_least_automatic_app_score_outliers))
+SRHI_least_automatic_app_score_outliers = find_outliers(CM_participant_level_df, "SRHI_least_automatic_app_score")$outlier_ids
+CM_participant_level_df_NoSRHILeastOutliers <- filter(CM_participant_level_df, !(ppid %in% SRHI_least_automatic_app_score_outliers))
 ppid_failed_attention <- c("Z73", "Z109", "M7" ,  "Z54" , "Z115" ,"Z141", "Z137","Z55") # participants who failed at least one attention check
-participant_level_df_NoAttFail <- filter(participant_level_df, !(ppid %in% ppid_failed_attention))
+CM_participant_level_df_NoAttFail <- filter(CM_participant_level_df, !(ppid %in% ppid_failed_attention))
 
 # SRHI most vs. least auto app
 
 # no exclusions
-t.test(participant_level_df$SRHI_most_automatic_app_score, participant_level_df$SRHI_least_automatic_app_score, paired = T)
+t.test(CM_participant_level_df$SRHI_most_automatic_app_score, CM_participant_level_df$SRHI_least_automatic_app_score, paired = T)
 ttestBF(
-  x = participant_level_df$SRHI_most_automatic_app_score,
-  y = participant_level_df$SRHI_least_automatic_app_score,
+  x = CM_participant_level_df$SRHI_most_automatic_app_score,
+  y = CM_participant_level_df$SRHI_least_automatic_app_score,
   paired = TRUE
 )
 
 # outliers excluded
-t.test(participant_level_df_NoSRHILeastOutliers$SRHI_most_automatic_app_score, participant_level_df_NoSRHILeastOutliers$SRHI_least_automatic_app_score, paired = T)
+t.test(CM_participant_level_df_NoSRHILeastOutliers$SRHI_most_automatic_app_score, CM_participant_level_df_NoSRHILeastOutliers$SRHI_least_automatic_app_score, paired = T)
 ttestBF(
-  x = participant_level_df_NoSRHILeastOutliers$SRHI_most_automatic_app_score,
-  y = participant_level_df_NoSRHILeastOutliers$SRHI_least_automatic_app_score,
+  x = CM_participant_level_df_NoSRHILeastOutliers$SRHI_most_automatic_app_score,
+  y = CM_participant_level_df_NoSRHILeastOutliers$SRHI_least_automatic_app_score,
   paired = TRUE
 )
 
 # inattentive participants excluded
-t.test(participant_level_df_NoAttFail$SRHI_most_automatic_app_score, participant_level_df_NoAttFail$SRHI_least_automatic_app_score, paired = T)
+t.test(CM_participant_level_df_NoAttFail$SRHI_most_automatic_app_score, CM_participant_level_df_NoAttFail$SRHI_least_automatic_app_score, paired = T)
 ttestBF(
-  x = participant_level_df_NoAttFail$SRHI_most_automatic_app_score,
-  y = participant_level_df_NoAttFail$SRHI_least_automatic_app_score,
+  x = CM_participant_level_df_NoAttFail$SRHI_most_automatic_app_score,
+  y = CM_participant_level_df_NoAttFail$SRHI_least_automatic_app_score,
   paired = TRUE
 )
 
@@ -174,85 +237,85 @@ ttestBF(
 # SRHI least auto app vs. social media and phone
 
 # no exclusions
-t.test(participant_level_df$SRHI_social_media_use_score, participant_level_df$SRHI_least_automatic_app_score, paired = T)
+t.test(CM_participant_level_df$SRHI_social_media_use_score, CM_participant_level_df$SRHI_least_automatic_app_score, paired = T)
 ttestBF(
-  x = participant_level_df$SRHI_social_media_use_score,
-  y = participant_level_df$SRHI_least_automatic_app_score,
+  x = CM_participant_level_df$SRHI_social_media_use_score,
+  y = CM_participant_level_df$SRHI_least_automatic_app_score,
   paired = TRUE
 )
-t.test(participant_level_df$SRHI_phone_use_score, participant_level_df$SRHI_least_automatic_app_score, paired = T)
+t.test(CM_participant_level_df$SRHI_phone_use_score, CM_participant_level_df$SRHI_least_automatic_app_score, paired = T)
 ttestBF(
-  x = participant_level_df$SRHI_phone_use_score,
-  y = participant_level_df$SRHI_least_automatic_app_score,
+  x = CM_participant_level_df$SRHI_phone_use_score,
+  y = CM_participant_level_df$SRHI_least_automatic_app_score,
   paired = TRUE
 )
 
 # outliers excluded
-t.test(participant_level_df_NoSRHILeastOutliers$SRHI_social_media_use_score, participant_level_df_NoSRHILeastOutliers$SRHI_least_automatic_app_score, paired = T)
+t.test(CM_participant_level_df_NoSRHILeastOutliers$SRHI_social_media_use_score, CM_participant_level_df_NoSRHILeastOutliers$SRHI_least_automatic_app_score, paired = T)
 ttestBF(
-  x = participant_level_df_NoSRHILeastOutliers$SRHI_social_media_use_score,
-  y = participant_level_df_NoSRHILeastOutliers$SRHI_least_automatic_app_score,
+  x = CM_participant_level_df_NoSRHILeastOutliers$SRHI_social_media_use_score,
+  y = CM_participant_level_df_NoSRHILeastOutliers$SRHI_least_automatic_app_score,
   paired = TRUE
 )
-t.test(participant_level_df_NoSRHILeastOutliers$SRHI_phone_use_score, participant_level_df_NoSRHILeastOutliers$SRHI_least_automatic_app_score, paired = T)
+t.test(CM_participant_level_df_NoSRHILeastOutliers$SRHI_phone_use_score, CM_participant_level_df_NoSRHILeastOutliers$SRHI_least_automatic_app_score, paired = T)
 ttestBF(
-  x = participant_level_df_NoSRHILeastOutliers$SRHI_phone_use_score,
-  y = participant_level_df_NoSRHILeastOutliers$SRHI_least_automatic_app_score,
+  x = CM_participant_level_df_NoSRHILeastOutliers$SRHI_phone_use_score,
+  y = CM_participant_level_df_NoSRHILeastOutliers$SRHI_least_automatic_app_score,
   paired = TRUE
 )
 
 # inattentive participants excluded
-t.test(participant_level_df_NoAttFail$SRHI_social_media_use_score, participant_level_df_NoAttFail$SRHI_least_automatic_app_score, paired = T)
+t.test(CM_participant_level_df_NoAttFail$SRHI_social_media_use_score, CM_participant_level_df_NoAttFail$SRHI_least_automatic_app_score, paired = T)
 ttestBF(
-  x = participant_level_df_NoAttFail$SRHI_social_media_use_score,
-  y = participant_level_df_NoAttFail$SRHI_least_automatic_app_score,
+  x = CM_participant_level_df_NoAttFail$SRHI_social_media_use_score,
+  y = CM_participant_level_df_NoAttFail$SRHI_least_automatic_app_score,
   paired = TRUE
 )
-t.test(participant_level_df_NoAttFail$SRHI_phone_use_score, participant_level_df_NoAttFail$SRHI_least_automatic_app_score, paired = T)
+t.test(CM_participant_level_df_NoAttFail$SRHI_phone_use_score, CM_participant_level_df_NoAttFail$SRHI_least_automatic_app_score, paired = T)
 ttestBF(
-  x = participant_level_df_NoAttFail$SRHI_phone_use_score,
-  y = participant_level_df_NoAttFail$SRHI_least_automatic_app_score,
+  x = CM_participant_level_df_NoAttFail$SRHI_phone_use_score,
+  y = CM_participant_level_df_NoAttFail$SRHI_least_automatic_app_score,
   paired = TRUE
 )
 
 # most auto app 
 
 # no exclusions
-t.test(participant_level_df$SRHI_social_media_use_score, participant_level_df$SRHI_most_automatic_app_score, paired = T)
+t.test(CM_participant_level_df$SRHI_social_media_use_score, CM_participant_level_df$SRHI_most_automatic_app_score, paired = T)
 ttestBF(
-  x = participant_level_df$SRHI_social_media_use_score,
-  y = participant_level_df$SRHI_most_automatic_app_score,
+  x = CM_participant_level_df$SRHI_social_media_use_score,
+  y = CM_participant_level_df$SRHI_most_automatic_app_score,
   paired = TRUE
 )
-t.test(participant_level_df$SRHI_phone_use_score, participant_level_df$SRHI_most_automatic_app_score, paired = T)
+t.test(CM_participant_level_df$SRHI_phone_use_score, CM_participant_level_df$SRHI_most_automatic_app_score, paired = T)
 ttestBF(
-  x = participant_level_df$SRHI_phone_use_score,
-  y = participant_level_df$SRHI_most_automatic_app_score,
+  x = CM_participant_level_df$SRHI_phone_use_score,
+  y = CM_participant_level_df$SRHI_most_automatic_app_score,
   paired = TRUE
 )
 
 # inattentive participants excluded
-t.test(participant_level_df_NoAttFail$SRHI_social_media_use_score, participant_level_df_NoAttFail$SRHI_most_automatic_app_score, paired = T)
+t.test(CM_participant_level_df_NoAttFail$SRHI_social_media_use_score, CM_participant_level_df_NoAttFail$SRHI_most_automatic_app_score, paired = T)
 ttestBF(
-  x = participant_level_df_NoAttFail$SRHI_social_media_use_score,
-  y = participant_level_df_NoAttFail$SRHI_most_automatic_app_score,
+  x = CM_participant_level_df_NoAttFail$SRHI_social_media_use_score,
+  y = CM_participant_level_df_NoAttFail$SRHI_most_automatic_app_score,
   paired = TRUE
 )
-t.test(participant_level_df_NoAttFail$SRHI_phone_use_score, participant_level_df_NoAttFail$SRHI_most_automatic_app_score, paired = T)
+t.test(CM_participant_level_df_NoAttFail$SRHI_phone_use_score, CM_participant_level_df_NoAttFail$SRHI_most_automatic_app_score, paired = T)
 ttestBF(
-  x = participant_level_df_NoAttFail$SRHI_phone_use_score,
-  y = participant_level_df_NoAttFail$SRHI_most_automatic_app_score,
+  x = CM_participant_level_df_NoAttFail$SRHI_phone_use_score,
+  y = CM_participant_level_df_NoAttFail$SRHI_most_automatic_app_score,
   paired = TRUE
 )
 
 ## Fig 4b: App session duration
 #####################
 
-automatic_app_ppids <- participant_level_df %>% 
+automatic_app_ppids <- CM_participant_level_df %>% 
   filter(!(most_automatic_app_recoded == "no_unique_app") & # no unique app is where we couldnt work out what they meant as it could have been multiple, so excluding these 
            !(least_automatic_app_recoded== "no_unique_app"))
 
-automatic_app_appsessions_duration <- app_session_level_df %>% 
+automatic_app_appsessions_duration <- CM_app_session_level_df %>% 
   right_join(automatic_app_ppids, by = "ppid") %>%  
   filter(App == most_automatic_app_recoded | App == least_automatic_app_recoded) %>% 
   group_by(ppid) %>% 
@@ -272,7 +335,7 @@ plot_statistic("mean")   # For mean
 plot_statistic("median") # For median
 plot_statistic("sd")     # For standard deviation
 Fig4b <- plot_statistic("mean")
-ggsave(str_c(parent_dir,"/output/figures/Fig4b.png"), plot = Fig4b, width = 5, height = 7, units = "in")
+ggsave(str_c(parent_dir,"/output/figures/Fig4b.pdf"), plot = Fig4b, width = 5, height = 7, units = "in")
 
 ######### stats ######### 
 
@@ -290,7 +353,7 @@ ttestBF(
 ## Fig 4c: Proportion of sessions that App appears
 #####################
 
-automatic_app_appsessions <- app_session_level_df %>%  
+automatic_app_appsessions <- CM_app_session_level_df %>%  
   right_join(automatic_app_ppids, by = "ppid") %>%  
   select(ppid, App, most_automatic_app_recoded, least_automatic_app_recoded, session_id, app_session_duration_secs) %>%
   group_by(session_id) %>%
@@ -371,7 +434,7 @@ Fig4c <- ggplot(ppid_proportions, aes(x = app_type, y = proportion, fill = app_t
   scale_color_manual(values = automatic_palette) +
   theme_classic() +
   theme(legend.position = "none")
-ggsave(str_c(parent_dir,"/output/figures/Fig4c.png"), plot = Fig4c, width = 5, height = 7, units = "in")
+ggsave(str_c(parent_dir,"/output/figures/Fig4c.pdf"), plot = Fig4c, width = 5, height = 7, units = "in")
 
 ######### stats ######### 
 
@@ -391,7 +454,7 @@ ttestBF(
 #####################
 
 
-automatic_app_sessions <- session_level_df %>% 
+automatic_app_sessions <- CM_session_level_df %>% 
   right_join(automatic_app_ppids, by = "ppid") %>%
   group_by(ppid) %>%
   mutate(
@@ -452,7 +515,7 @@ Fig4d <- ggplot(summary_data, aes(x = app_position, y = mean_value, fill = auto_
   scale_color_manual(values = automatic_palette) +
   scale_fill_manual(values = automatic_palette) +
   theme_classic()
-ggsave(str_c(parent_dir,"/output/figures/Fig4d.png"),, plot = Fig4d, width = 6.5, height = 7, units = "in")
+ggsave(str_c(parent_dir,"/output/figures/Fig4d.pdf"),, plot = Fig4d, width = 6.5, height = 7, units = "in")
 
 
 ######### stats ######### 
@@ -520,7 +583,9 @@ ttest_results
 ## Fig S1: Questionnaire cross-correlations
 ################################################################################
 
-qnr_vars <- participant_level_df %>% dplyr::select(PHQ_8_score, GAD_7_score, OCI_R_score, ATQ_short_score,
+# A: CM dataset
+
+qnr_vars <- CM_participant_level_df %>% dplyr::select(PHQ_8_score, GAD_7_score, OCI_R_score, ATQ_short_score,
                                      SRHI_phone_use_score, SRHI_social_media_use_score, 
                                      SRHI_most_automatic_app_score, SRHI_least_automatic_app_score, 
                                      BIS_total_score,BAS_fun_seeking_score,BAS_drive_score,
@@ -539,10 +604,14 @@ cor_matrix <- cor_results$r
 p_matrix <- cor_results$P
 p_matrix[which(is.na(p_matrix))] <- 1
 ##### Figure S1
-FigS1 <- corrplot(cor_matrix, method = "color", 
+FigS1a <- corrplot(cor_matrix, method = "color", 
          p.mat = p_matrix, sig.level = c(0.001, 0.01, 0.05), 
          insig = "label_sig", pch.cex = 2.5)
-png(str_c(parent_dir,"/output/figures/FigS1.png"),width = 12, height = 12, units = "in", res = 300)
+pdf(
+  str_c(parent_dir, "/output/figures/FigS1a.pdf"),
+  width = 12,
+  height = 12
+)
 p_matrix[upper.tri(p_matrix)] <- t(p_matrix)[upper.tri(p_matrix)]
 corrplot(cor_matrix, method = "color", 
          p.mat = p_matrix, sig.level = c(0.001, 0.01, 0.05), 
@@ -553,69 +622,130 @@ dev.off()
 
 cor_results$r["PHQ_8_score", "GAD_7_score"]
 cor_results$P["PHQ_8_score", "GAD_7_score"]
-correlationBF(participant_level_df$PHQ_8_score, participant_level_df$GAD_7_score)
+correlationBF(CM_participant_level_df$PHQ_8_score, CM_participant_level_df$GAD_7_score)
 
 cor_results$r["PHQ_8_score", "OCI_R_score"]
 cor_results$P["PHQ_8_score", "OCI_R_score"]
-correlationBF(participant_level_df$PHQ_8_score, participant_level_df$OCI_R_score)
+correlationBF(CM_participant_level_df$PHQ_8_score, CM_participant_level_df$OCI_R_score)
 
 cor_results$r["GAD_7_score", "OCI_R_score"]
 cor_results$P["GAD_7_score", "OCI_R_score"]
-correlationBF(participant_level_df$GAD_7_score, participant_level_df$OCI_R_score)
+correlationBF(CM_participant_level_df$GAD_7_score, CM_participant_level_df$OCI_R_score)
 
 cor_results$r["PHQ_8_score", "ATQ_short_score"]
 cor_results$P["PHQ_8_score", "ATQ_short_score"]
-correlationBF(participant_level_df$PHQ_8_score, participant_level_df$ATQ_short_score)
+correlationBF(CM_participant_level_df$PHQ_8_score, CM_participant_level_df$ATQ_short_score)
 
 cor_results$r["GAD_7_score", "ATQ_short_score"]
 cor_results$P["GAD_7_score", "ATQ_short_score"]
-correlationBF(participant_level_df$GAD_7_score, participant_level_df$ATQ_short_score)
+correlationBF(CM_participant_level_df$GAD_7_score, CM_participant_level_df$ATQ_short_score)
 
 cor_results$r["PHQ_8_score", "BIS_total_score"]
 cor_results$P["PHQ_8_score", "BIS_total_score"]
-correlationBF(participant_level_df$PHQ_8_score, participant_level_df$BIS_total_score)
+correlationBF(CM_participant_level_df$PHQ_8_score, CM_participant_level_df$BIS_total_score)
 
 cor_results$r["GAD_7_score", "BIS_total_score"]
 cor_results$P["GAD_7_score", "BIS_total_score"]
-correlationBF(participant_level_df$GAD_7_score, participant_level_df$BIS_total_score)
+correlationBF(CM_participant_level_df$GAD_7_score, CM_participant_level_df$BIS_total_score)
 
 cor_results$r["ATQ_short_score", "BIS_total_score"]
 cor_results$P["ATQ_short_score", "BIS_total_score"]
-correlationBF(participant_level_df$GAD_7_score, participant_level_df$BIS_total_score)
+correlationBF(CM_participant_level_df$GAD_7_score, CM_participant_level_df$BIS_total_score)
 
 cor_results$r["SRHI_phone_use_score", "SRHI_social_media_use_score"]
 cor_results$P["SRHI_phone_use_score", "SRHI_social_media_use_score"]
-correlationBF(participant_level_df$SRHI_phone_use_score, participant_level_df$SRHI_social_media_use_score)
+correlationBF(CM_participant_level_df$SRHI_phone_use_score, CM_participant_level_df$SRHI_social_media_use_score)
 
 cor_results$r["SRHI_phone_use_score", "SRHI_most_automatic_app_score"]
 cor_results$P["SRHI_phone_use_score", "SRHI_most_automatic_app_score"]
-correlationBF(participant_level_df$SRHI_phone_use_score, participant_level_df$SRHI_most_automatic_app_score)
+correlationBF(CM_participant_level_df$SRHI_phone_use_score, CM_participant_level_df$SRHI_most_automatic_app_score)
 
 cor_results$r["SRHI_social_media_use_score", "SRHI_most_automatic_app_score"]
 cor_results$P["SRHI_social_media_use_score", "SRHI_most_automatic_app_score"]
-correlationBF(participant_level_df$SRHI_social_media_use_score, participant_level_df$SRHI_most_automatic_app_score)
+correlationBF(CM_participant_level_df$SRHI_social_media_use_score, CM_participant_level_df$SRHI_most_automatic_app_score)
 
 cor_results$r["SRHI_phone_use_score", "mean_timespent_per_day_hrs"]
 cor_results$P["SRHI_phone_use_score", "mean_timespent_per_day_hrs"]
-correlationBF(participant_level_df$SRHI_phone_use_score, participant_level_df$mean_timespent_per_day_hrs)
+correlationBF(CM_participant_level_df$SRHI_phone_use_score, CM_participant_level_df$mean_timespent_per_day_hrs)
 
 cor_results$r["SRHI_social_media_use_score", "mean_timespent_per_day_hrs"]
 cor_results$P["SRHI_social_media_use_score", "mean_timespent_per_day_hrs"]
-correlationBF(participant_level_df$SRHI_social_media_use_score, participant_level_df$mean_timespent_per_day_hrs)
+correlationBF(CM_participant_level_df$SRHI_social_media_use_score, CM_participant_level_df$mean_timespent_per_day_hrs)
 
 cor_results$r["BIS_total_score", "BAS_fun_seeking_score"]
 cor_results$P["BIS_total_score", "BAS_fun_seeking_score"]
-correlationBF(participant_level_df$BIS_total_score, participant_level_df$BAS_fun_seeking_score)
+correlationBF(CM_participant_level_df$BIS_total_score, CM_participant_level_df$BAS_fun_seeking_score)
 
 cor_results$r["BAS_fun_seeking_score", "BAS_drive_score"]
 cor_results$P["BAS_fun_seeking_score", "BAS_drive_score"]
-correlationBF(participant_level_df$BAS_fun_seeking_score, participant_level_df$BAS_drive_score)
+correlationBF(CM_participant_level_df$BAS_fun_seeking_score, CM_participant_level_df$BAS_drive_score)
 
 cor_results$r["BAS_fun_seeking_score", "BAS_reward_responsiveness_score"]
 cor_results$P["BAS_fun_seeking_score", "BAS_reward_responsiveness_score"]
-correlationBF(participant_level_df$BAS_fun_seeking_score, participant_level_df$BAS_reward_responsiveness_score)
+correlationBF(CM_participant_level_df$BAS_fun_seeking_score, CM_participant_level_df$BAS_reward_responsiveness_score)
 
 cor_results$r["BAS_reward_responsiveness_score", "BAS_drive_score"]
 cor_results$P["BAS_reward_responsiveness_score", "BAS_drive_score"]
-correlationBF(participant_level_df$BAS_reward_responsiveness_score, participant_level_df$BAS_drive_score)
+correlationBF(CM_participant_level_df$BAS_reward_responsiveness_score, CM_participant_level_df$BAS_drive_score)
+
+# B: ABCD dataset
+
+ABCD_qnr_vars <- ABCD_participant_level_df %>% dplyr::select(mh_y_ysr__dsm__anx_tscore, 
+                                                             mh_y_ysr__dsm__dep_tscore,
+                                                             mh_y_ysr__dsm__adhd_tscore,
+                                                             mean_timespent_per_day_hrs)
+
+
+ABCD_qnr_vars_cor_matrix <- cor(ABCD_qnr_vars, use = "pairwise.complete.obs")
+
+# Assume qnr_vars is your data frame with variables of interest
+ABCD_cor_results <- rcorr(as.matrix(ABCD_qnr_vars))  # calculates r and p values
+
+###### make figure
+
+# Extract matrices
+ABCD_cor_matrix <- ABCD_cor_results$r
+ABCD_p_matrix <- ABCD_cor_results$P
+ABCD_p_matrix[which(is.na(ABCD_p_matrix))] <- 1
+
+##### Figure S1b
+FigS1b <- corrplot(ABCD_cor_matrix, method = "color", 
+                  p.mat = ABCD_p_matrix, sig.level = c(0.001, 0.01, 0.05), 
+                  insig = "label_sig", pch.cex = 2.3)
+pdf(str_c(parent_dir,"/output/figures/FigS1b.pdf"),
+    width = 12, height = 12)
+ABCD_p_matrix[upper.tri(ABCD_p_matrix)] <- t(ABCD_p_matrix)[upper.tri(ABCD_p_matrix)]
+corrplot(ABCD_cor_matrix, method = "color", 
+         p.mat = ABCD_p_matrix, sig.level = c(0.001, 0.01, 0.05), 
+         insig = "label_sig", pch.cex = 5, tl.pos = "n") 
+dev.off()
+
+###### calculate stats
+
+ABCD_cor_results$r["mh_y_ysr__dsm__anx_tscore", "mh_y_ysr__dsm__dep_tscore"]
+ABCD_cor_results$P["mh_y_ysr__dsm__anx_tscore", "mh_y_ysr__dsm__dep_tscore"]
+correlationBF(ABCD_participant_level_df$mh_y_ysr__dsm__anx_tscore, ABCD_participant_level_df$mh_y_ysr__dsm__dep_tscore)
+
+ABCD_cor_results$r["mh_y_ysr__dsm__adhd_tscore", "mh_y_ysr__dsm__dep_tscore"]
+ABCD_cor_results$P["mh_y_ysr__dsm__adhd_tscore", "mh_y_ysr__dsm__dep_tscore"]
+correlationBF(ABCD_participant_level_df$mh_y_ysr__dsm__adhd_tscore, ABCD_participant_level_df$mh_y_ysr__dsm__dep_tscore)
+
+ABCD_cor_results$r["mh_y_ysr__dsm__adhd_tscore", "mh_y_ysr__dsm__anx_tscore"]
+ABCD_cor_results$P["mh_y_ysr__dsm__adhd_tscore", "mh_y_ysr__dsm__anx_tscore"]
+correlationBF(ABCD_participant_level_df$mh_y_ysr__dsm__adhd_tscore, ABCD_participant_level_df$mh_y_ysr__dsm__anx_tscore)
+
+# corrs with time spent 
+ABCD_cor_results$r["mean_timespent_per_day_hrs", "mh_y_ysr__dsm__dep_tscore"]
+ABCD_cor_results$P["mean_timespent_per_day_hrs", "mh_y_ysr__dsm__dep_tscore"]
+correlationBF(ABCD_participant_level_df$mean_timespent_per_day_hrs, ABCD_participant_level_df$mh_y_ysr__dsm__dep_tscore)
+
+ABCD_cor_results$r["mean_timespent_per_day_hrs", "mh_y_ysr__dsm__anx_tscore"]
+ABCD_cor_results$P["mean_timespent_per_day_hrs", "mh_y_ysr__dsm__anx_tscore"]
+correlationBF(ABCD_participant_level_df$mean_timespent_per_day_hrs, ABCD_participant_level_df$mh_y_ysr__dsm__anx_tscore)
+
+ABCD_cor_results$r["mean_timespent_per_day_hrs", "mh_y_ysr__dsm__adhd_tscore"]
+ABCD_cor_results$P["mean_timespent_per_day_hrs", "mh_y_ysr__dsm__adhd_tscore"]
+correlationBF(ABCD_participant_level_df$mean_timespent_per_day_hrs, ABCD_participant_level_df$mh_y_ysr__dsm__adhd_tscore)
+
+
 
